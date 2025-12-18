@@ -31,7 +31,7 @@ class WindowManagementKeywords:
             
         Examples:
         | Launch Application | notepad.exe |
-        | ${app_id} | Launch Application | C:\Program Files\MyApp\myapp.exe | timeout=5 |
+        | ${app_id} | Launch Application | C:/Program Files/MyApp/myapp.exe | timeout=5 |
         """
         timeout = timeout or self.library.timeout
         self.library._log(f"Launching application: {app_path}")

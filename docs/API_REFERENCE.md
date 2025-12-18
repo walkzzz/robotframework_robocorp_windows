@@ -24,7 +24,7 @@ This document provides detailed documentation for all keywords available in the 
 **Examples:**
 ```robotframework
 Launch Application    notepad.exe
-${app_id}    Launch Application    C:\\Program Files\\MyApp\\myapp.exe    timeout=5
+${app_id}    Launch Application    C:/Program Files/MyApp/myapp.exe    timeout=5
 ```
 
 ### Connect To Application

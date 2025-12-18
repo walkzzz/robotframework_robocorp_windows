@@ -104,66 +104,67 @@ class TestWindowManagementKeywords(unittest.TestCase):
     
     def test_launch_application(self):
         """Test launch_application keyword"""
-        # Mock subprocess.Popen
-        mock_process = Mock()
-        mock_process.pid = 123
-        
-        # Mock find_windows function
+        # Mock window and service
         mock_window = Mock()
         mock_window.name = "Test Application"
         
-        with patch('subprocess.Popen', return_value=mock_process) as mock_popen, \
-             patch('robotframework_robocorp_windows.keywords.window_management.find_windows', return_value=[mock_window]) as mock_find_windows:
-            # Mock _wait_until to return our mock window
-            self.mock_library._wait_until = Mock(return_value=mock_window)
-            # Mock cache.register to return a dummy app_id
-            self.mock_library.cache.register = Mock(return_value="app_123")
-            
-            result = self.window_management.launch_application("test.exe")
-            
-            # Verify the result
-            self.assertEqual(result, "app_123")
-            mock_popen.assert_called_once_with("test.exe")
-            self.mock_library._log.assert_called()
+        # Mock window_service methods
+        self.window_management.window_service.launch_application = Mock(return_value=("test.exe", mock_window))
+        self.window_management.window_service.get_window_title = Mock(return_value="Test Application")
+        
+        # Mock cache.register to return a dummy app_id
+        self.mock_library.cache.register = Mock(return_value="app_123")
+        
+        result = self.window_management.launch_application("test.exe")
+        
+        # Verify the result
+        self.assertEqual(result, "app_123")
+        self.window_management.window_service.launch_application.assert_called_once_with("test.exe", 5)
+        self.window_management.window_service.get_window_title.assert_called_once_with(mock_window)
+        self.mock_library.cache.register.assert_called()
+        self.mock_library._log.assert_called()
     
     def test_connect_to_application(self):
         """Test connect_to_application keyword"""
-        # Mock the find_window function
+        # Mock the window and service
         mock_window = Mock()
         mock_window.name = "Connected App"
         mock_window.close_window = Mock()
         
+        # Mock window_service methods
+        self.window_management.window_service.connect_to_application = Mock(return_value=("name:TestApp", mock_window))
+        self.window_management.window_service.get_window_title = Mock(return_value="Connected App")
+        
         # Mock cache.register to return a dummy app_id
         self.mock_library.cache.register = Mock(return_value="app_123")
-        # Mock _wait_until to return our mock window
-        self.mock_library._wait_until = Mock(return_value=mock_window)
         
         result = self.window_management.connect_to_application(title="TestApp")
         
         # Verify the result
         self.assertEqual(result, "app_123")
         self.assertEqual(self.mock_library.current_window, mock_window)
+        self.window_management.window_service.connect_to_application.assert_called()
+        self.window_management.window_service.get_window_title.assert_called()
         self.mock_library._log.assert_called()
     
     def test_set_current_window(self):
         """Test set_current_window keyword"""
-        # Mock the application and window
+        # Mock the window
         mock_window = Mock()
         mock_window.title = "Test Window"
         mock_window.exists = Mock(return_value=True)
         
-        mock_app = Mock()
-        mock_app.window = Mock(return_value=mock_window)
-        mock_app.top_window = Mock(return_value=mock_window)
-        
-        self.mock_library.app = mock_app
-        self.mock_library._wait_until = Mock(return_value=mock_window)
+        # Mock window_service methods
+        self.window_management.window_service.set_current_window = Mock(return_value=mock_window)
+        self.window_management.window_service.get_window_title = Mock(return_value="Test Window")
         
         # Call the method
         self.window_management.set_current_window(title="Test")
         
         # Verify
         self.assertEqual(self.mock_library.current_window, mock_window)
+        self.window_management.window_service.set_current_window.assert_called()
+        self.window_management.window_service.get_window_title.assert_called()
         self.mock_library._log.assert_called()
     
     def test_close_application(self):
@@ -231,30 +232,31 @@ class TestWindowManagementKeywords(unittest.TestCase):
     def test_window_should_be_open(self):
         """Test window_should_be_open keyword"""
         # Mock the library methods
-        mock_window = Mock()
-        mock_window.exists = Mock(return_value=True)
-        self.mock_library.current_window = mock_window
-        self.mock_library._get_application = Mock(return_value=Mock())
-        self.mock_library._wait_until = Mock(return_value=True)
+        self.mock_library._log = Mock()
+        
+        # Mock window_service method to not raise an exception
+        self.window_management.window_service.window_should_be_open = Mock()
         
         # Call the method
         self.window_management.window_should_be_open(title="Test")
         
         # Verify
-        self.mock_library._wait_until.assert_called()
+        self.window_management.window_service.window_should_be_open.assert_called()
         self.mock_library._log.assert_called()
     
     def test_window_should_be_closed(self):
         """Test window_should_be_closed keyword"""
         # Mock the library methods
-        self.mock_library._get_application = Mock(return_value=Mock())
-        self.mock_library._wait_until = Mock(return_value=True)
+        self.mock_library._log = Mock()
+        
+        # Mock window_service method to not raise an exception
+        self.window_management.window_service.window_should_be_closed = Mock()
         
         # Call the method
         self.window_management.window_should_be_closed(title="Test")
         
         # Verify
-        self.mock_library._wait_until.assert_called()
+        self.window_management.window_service.window_should_be_closed.assert_called()
         self.mock_library._log.assert_called()
     
     def test_get_window_title(self):

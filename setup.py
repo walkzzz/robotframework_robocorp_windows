@@ -4,7 +4,7 @@ setup(
     name='robotframework-robocorp-windows',
     version='1.0.0',
     description='Robot Framework library for Windows automation using robocorp-windows',
-    long_description=open('README.md').read(),
+    long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
     author='Your Name',
     author_email='your.email@example.com',

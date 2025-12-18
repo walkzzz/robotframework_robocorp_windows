@@ -64,7 +64,7 @@ class RobocorpWindows:
             
         Examples:
         | Launch Application | notepad.exe |
-        | ${app_id} | Launch Application | C:\Program Files\MyApp\myapp.exe | timeout=5 |
+        | ${app_id} | Launch Application | C:/Program Files/MyApp/myapp.exe | timeout=5 |
         """
         return self.window_management.launch_application(app_path, timeout)
     

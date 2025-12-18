@@ -109,18 +109,22 @@ class RobocorpWindowsDriver:
     
     def find_control(self, window, control_identifier, timeout=10):
         """在窗口中查找控件
-        
+
         Args:
             window: 窗口元素
             control_identifier: 控件标识符
             timeout: 超时时间（秒）
-            
+
         Returns:
             ControlElement: 找到的控件元素
-            
+
         Raises:
             ControlNotFoundError: 控件未找到时
         """
+        # 验证定位符格式
+        valid_formats = ["name:", "id:", "class:", "text:"]
+        has_valid_prefix = any(control_identifier.startswith(format) for format in valid_formats)
+        
         start_time = time.time()
         while time.time() - start_time < timeout:
             try:
@@ -131,7 +135,11 @@ class RobocorpWindowsDriver:
             except ElementNotFound:
                 time.sleep(0.5)
         
-        raise ControlNotFoundError(f"Control not found with identifier: {control_identifier}")
+        # 优化异常消息，提供有效定位符格式
+        if not has_valid_prefix:
+            raise ControlNotFoundError(f"Control not found with identifier: {control_identifier}. Valid locator formats: name:Button1, id:123, class:Edit, text:OK")
+        else:
+            raise ControlNotFoundError(f"Control not found with identifier: {control_identifier}")
     
     def get_window_title(self, window):
         """获取窗口标题

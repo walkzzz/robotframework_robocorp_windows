@@ -80,7 +80,7 @@ Library    RobocorpWindows    timeout=15    retry_interval=1.0
 
 ```robotframework
 Launch Application    notepad.exe
-${app_id}    Launch Application    C:\\Program Files\\MyApp\\myapp.exe    timeout=5
+${app_id}    Launch Application    C:/Program Files/MyApp/myapp.exe    timeout=5
 ```
 
 ### Connecting to Running Applications

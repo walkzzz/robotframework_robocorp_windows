@@ -110,16 +110,16 @@ class TestControlOperationsKeywords(unittest.TestCase):
     
     def test_find_control(self):
         """Test find_control keyword"""
-        # Mock the window.find method
+        # Mock the control_service.find_control method
         mock_control = MockRobocorpModule.ControlElement()
-        self.mock_library.current_window.find = Mock(return_value=mock_control)
-        self.mock_library._wait_until = Mock(return_value=mock_control)
+        self.control_operations.control_service.find_control = Mock(return_value=mock_control)
         
         # Call the method
         result = self.control_operations.find_control("Edit")
         
         # Verify
         self.assertEqual(result, mock_control)
+        self.control_operations.control_service.find_control.assert_called()
         self.mock_library._log.assert_called()
     
     def test_click_control(self):
@@ -190,26 +190,26 @@ class TestControlOperationsKeywords(unittest.TestCase):
     
     def test_control_should_exist(self):
         """Test control_should_exist keyword"""
-        # Mock the find_control method
-        mock_control = MockRobocorpModule.ControlElement()
-        self.control_operations.find_control = Mock(return_value=mock_control)
+        # Mock the control_service.control_should_exist method
+        self.control_operations.control_service.control_should_exist = Mock()
         
         # Call the method
         self.control_operations.control_should_exist("Edit")
         
         # Verify
+        self.control_operations.control_service.control_should_exist.assert_called()
         self.mock_library._log.assert_called()
     
     def test_control_should_not_exist(self):
         """Test control_should_not_exist keyword"""
-        # Mock the window.find method to raise an exception
-        self.mock_library.current_window.find = Mock(side_effect=Exception())
-        self.mock_library._wait_until = Mock(return_value=True)
+        # Mock the control_service.control_should_not_exist method
+        self.control_operations.control_service.control_should_not_exist = Mock()
         
         # Call the method
         self.control_operations.control_should_not_exist("NonExistentControl")
         
         # Verify
+        self.control_operations.control_service.control_should_not_exist.assert_called()
         self.mock_library._log.assert_called()
     
     def test_set_control_value(self):
