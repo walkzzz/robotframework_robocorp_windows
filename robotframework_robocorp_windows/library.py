@@ -470,3 +470,89 @@ class RobocorpWindows:
                 return result
             time.sleep(retry_interval)
         return None
+    
+    # 异步控件操作关键字
+    @keyword("Async Type Into Control")
+    def async_type_into_control(self, control_identifier, text, timeout=None):
+        """异步向控件输入文本
+        
+        Args:
+            control_identifier: 控件标识符
+            text: 要输入的文本
+            timeout: 超时时间（秒）
+            
+        Returns:
+            str: 任务ID，可用于后续查询结果
+            
+        Examples:
+        | ${task_id} | Async Type Into Control | name=LargeTextArea | ${long_text} |
+        | # 执行其他操作 |
+        | Wait For Async Task | ${task_id} |
+        """
+        return self.async_control_operations.async_type_into_control(control_identifier, text, timeout)
+    
+    @keyword("Async Find All Controls")
+    def async_find_all_controls(self, control_identifier, timeout=None):
+        """异步查找所有匹配的控件
+        
+        Args:
+            control_identifier: 控件标识符
+            timeout: 超时时间（秒）
+            
+        Returns:
+            str: 任务ID，可用于后续查询结果
+            
+        Examples:
+        | ${task_id} | Async Find All Controls | name=ListBoxItem |
+        | ${controls} | Wait For Async Task | ${task_id} |
+        | Log | Found ${len(controls)} controls |
+        """
+        return self.async_control_operations.async_find_all_controls(control_identifier, timeout)
+    
+    @keyword("Wait For Async Task")
+    def wait_for_async_task(self, task_id, timeout=None):
+        """等待异步任务完成并返回结果
+        
+        Args:
+            task_id: 异步任务的ID
+            timeout: 等待超时时间（秒），如果为None则使用默认超时
+            
+        Returns:
+            Any: 异步任务的返回结果
+            
+        Examples:
+        | ${task_id} | Async Type Into Control | name=LargeTextArea | ${long_text} |
+        | ${result} | Wait For Async Task | ${task_id} | timeout=30 |
+        | Log | ${result} |
+        """
+        return self.async_control_operations.wait_for_async_task(task_id, timeout)
+    
+    @keyword("Async Click Control")
+    def async_click_control(self, control_identifier, timeout=None):
+        """异步点击控件
+        
+        Args:
+            control_identifier: 控件标识符
+            timeout: 超时时间（秒）
+            
+        Returns:
+            str: 任务ID，可用于后续查询结果
+            
+        Examples:
+        | ${task_id} | Async Click Control | name=LongRunningButton |
+        | Wait For Async Task | ${task_id} |
+        """
+        return self.async_control_operations.async_click_control(control_identifier, timeout)
+    
+    @keyword("Shutdown Async Executor")
+    def shutdown_async_executor(self, wait=True):
+        """关闭异步执行器
+        
+        Args:
+            wait: 是否等待所有任务完成后关闭（默认：True）
+            
+        Examples:
+        | Shutdown Async Executor |
+        | Shutdown Async Executor | wait=False |
+        """
+        return self.async_control_operations.shutdown_async_executor(wait)

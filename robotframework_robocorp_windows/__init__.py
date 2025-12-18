@@ -17,6 +17,7 @@ ROBOT_LIBRARY_CLASS = RobocorpWindows
 from .keywords.window_management import WindowManagementKeywords
 from .keywords.control_operations import ControlOperationsKeywords
 from .keywords.keyboard_mouse import KeyboardMouseKeywords
+from .keywords.async_control_operations import AsyncControlOperationsKeywords
 
 # Create an instance of the library to get access to the keywords
 _lib = RobocorpWindows()
@@ -30,7 +31,9 @@ keywords = [
     'type_into_control', 'get_control_text', 'control_should_exist',
     'control_should_not_exist', 'set_control_value', 'get_control_value',
     'select_from_combobox', 'check_checkbox', 'uncheck_checkbox',
-    'checkbox_should_be_checked', 'checkbox_should_be_unchecked'
+    'checkbox_should_be_checked', 'checkbox_should_be_unchecked',
+    'async_type_into_control', 'async_find_all_controls', 'async_click_control',
+    'wait_for_async_task', 'shutdown_async_executor'
 ]
 
 # Expose the keywords as module attributes

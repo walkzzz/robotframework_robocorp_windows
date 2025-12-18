@@ -38,4 +38,9 @@ setup(
     ],
     keywords=['robotframework', 'testing', 'automation', 'windows', 'robocorp'],
     python_requires='>=3.8',
+    entry_points={
+        'robotframework.libraries': [
+            'RobocorpWindows = robotframework_robocorp_windows:RobocorpWindows'
+        ]
+    },
 )
