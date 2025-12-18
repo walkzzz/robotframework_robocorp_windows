@@ -38,7 +38,7 @@ class ControlService:
     
     def find_control(self, window, control_identifier, timeout=10, use_cache=True):
         """在窗口中查找控件
-        
+
         Args:
             window: 窗口元素
             control_identifier: 控件标识符
@@ -49,20 +49,39 @@ class ControlService:
             ControlElement: 找到的控件元素
             
         Raises:
+            ValueError: 定位器格式无效时
             ControlNotFoundError: 控件未找到时
         """
+        import time
+        start_time = time.time()
+        
+        if self.logger:
+            self.logger.debug(f"Finding control with identifier: '{control_identifier}', timeout: {timeout}, use_cache: {use_cache}")
+        
+        # 验证定位器格式
+        from ..utils.locator_utils import locator_utils
+        locator_utils.validate_locator_format(control_identifier)
+        
         if use_cache and self.cache_enabled:
             # 尝试从缓存获取
             control, is_cached = self.control_cache.get(window, control_identifier)
             if is_cached:
+                if self.logger:
+                    self.logger.debug(f"Control '{control_identifier}' found in cache")
                 return control
         
         # 从驱动层查找控件
         control = self.driver.find_control(window, control_identifier, timeout)
         
+        elapsed_time = time.time() - start_time
+        if self.logger:
+            self.logger.debug(f"Control '{control_identifier}' found in {elapsed_time:.3f} seconds")
+        
         if use_cache and self.cache_enabled:
             # 将控件存入缓存
             self.control_cache.set(window, control_identifier, control, timeout)
+            if self.logger:
+                self.logger.debug(f"Control '{control_identifier}' cached")
         
         return control
     

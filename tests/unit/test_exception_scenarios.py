@@ -85,7 +85,6 @@ def test_exception_scenarios():
         print(f"   ✅ Correctly raised exception: {type(e).__name__}")
     
     print("\n🎉 Exception scenarios testing completed!")
-    return True
 
 if __name__ == "__main__":
     test_exception_scenarios()

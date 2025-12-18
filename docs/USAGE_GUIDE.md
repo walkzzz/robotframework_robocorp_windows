@@ -58,6 +58,27 @@ Example Test
     Close Application
 ```
 
+### Example with Async Operations
+
+```robotframework
+*** Settings ***
+Library    RobocorpWindows
+
+*** Variables ***
+${long_text}    This is a long text that takes time to type...${SPACE * 1000}
+
+*** Test Cases ***
+Async Operations Example
+    Launch Application    notepad.exe
+    # 异步输入长文本
+    ${task_id}    Async Type Into Control    Edit    ${long_text}
+    # 同时执行其他操作
+    Log    正在执行其他操作...
+    # 等待异步任务完成
+    ${result}    Wait For Async Task    ${task_id}
+    Log    异步操作结果: ${result}
+    Close Application
+
 ## 3. Library Configuration
 
 The library can be configured with the following parameters:
@@ -220,6 +241,105 @@ Scroll Mouse Wheel    3    100    200    # Scroll at specific position
 - Minimize the number of operations
 - Use `Control Should Exist` instead of multiple `Find Control` calls
 - Close applications properly to free up resources
+
+### 7.6 Advanced Scenarios
+
+#### 7.6.1 Complex Window Switching
+
+When working with applications that have multiple windows, you can use the following approach:
+
+```robotframework
+*** Settings ***
+Library    RobocorpWindows
+
+*** Test Cases ***
+Complex Window Switching Example
+    # Launch main application
+    Launch Application    myapp.exe
+    Window Should Be Open    title=MyApp Main Window
+    
+    # Open a dialog window
+    Click Control    name=OpenDialogButton
+    Window Should Be Open    title=MyApp Dialog
+    
+    # Interact with the dialog
+    Type Into Control    name=DialogInput    Test data
+    Click Control    name=DialogOKButton
+    
+    # Verify the dialog is closed and we're back to the main window
+    Window Should Be Open    title=MyApp Main Window
+    
+    # Open another window
+    Click Control    name=OpenSettingsButton
+    Window Should Be Open    title=MyApp Settings
+    
+    # Close the settings window
+    Click Control    name=SettingsCloseButton
+    
+    # Close the main application
+    Close Application
+```
+
+#### 7.6.2 Dynamic Control Handling
+
+For applications with dynamically generated controls, use these techniques:
+
+```robotframework
+*** Settings ***
+Library    RobocorpWindows
+
+*** Test Cases ***
+Dynamic Control Handling Example
+    # Launch application
+    Launch Application    dynamicapp.exe
+    
+    # Wait for a dynamic control to appear
+    ${timeout}    Set Variable    10
+    ${interval}    Set Variable    1
+    ${found}    Set Variable    ${False}
+    
+    :FOR    ${i}    IN RANGE    ${timeout}
+        Exit For Loop If    ${found}
+        Run Keyword And Ignore Error    ${control}    Find Control    name=DynamicControl
+        IF    '${control}' != 'None'
+            Set Variable    ${found}    ${True}
+        ELSE
+            Sleep    ${interval}
+        END
+    
+    Run Keyword If    not ${found}    Fail    Dynamic control not found within timeout
+    
+    # Interact with the dynamic control
+    Click Control    ${control}
+    
+    Close Application
+```
+
+#### 7.6.3 Working with Menus
+
+```robotframework
+*** Settings ***
+Library    RobocorpWindows
+
+*** Test Cases ***
+Menu Navigation Example
+    # Launch Notepad
+    Launch Application    notepad.exe
+    
+    # Access menu items using keyboard shortcuts
+    Press Keys    ALT
+    Press Keys    F
+    Press Keys    A    # File > Save As
+    
+    # Wait for Save As dialog
+    Sleep    1
+    
+    # Type file name and save
+    Type Into Control    name=FileName    test_file.txt
+    Click Control    name=Save
+    
+    Close Application
+```
 
 ## 8. Troubleshooting
 

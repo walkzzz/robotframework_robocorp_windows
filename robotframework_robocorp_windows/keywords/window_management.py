@@ -122,13 +122,15 @@ class WindowManagementKeywords:
         Examples:
         | Close Application |
         """
-        if self.library.current_window:
-            # Get window title using the service
-            window_title = self.window_service.get_window_title(self.library.current_window)
-            self.library._log(f"Closing window: {window_title}")
-            self.window_service.close_window(self.library.current_window)
-            self.library.current_window = None
+        # Get current window (will raise exception if no active window)
+        window = self.library._get_current_window()
         
+        # Get window title using the service
+        window_title = self.window_service.get_window_title(window)
+        self.library._log(f"Closing window: {window_title}")
+        self.window_service.close_window(window)
+        self.library.current_window = None
+    
     @keyword("Minimize Window")
     def minimize_window(self):
         """Minimize the current window.

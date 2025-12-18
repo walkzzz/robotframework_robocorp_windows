@@ -7,11 +7,13 @@
 from robot.api.deco import keyword
 from concurrent.futures import ThreadPoolExecutor
 import time
+from comtypes import CoInitialize, CoUninitialize
 from ..services.control_service import ControlService
 from ..utils.exceptions import (
     WindowNotFoundError,
     ControlNotFoundError,
-    ControlOperationException
+    ControlOperationException,
+    AsyncOperationException
 )
 
 
@@ -30,6 +32,7 @@ class AsyncControlOperationsKeywords:
         self.control_service = ControlService()
         self.control_service.set_logger(self.logger)
         self.executor = ThreadPoolExecutor(max_workers=5)  # 创建线程池，最大5个线程
+        self.task_map = {}  # 存储任务ID和future对象的映射
     
     @keyword("Async Type Into Control")
     def async_type_into_control(self, control_identifier, text, timeout=None):
@@ -52,15 +55,21 @@ class AsyncControlOperationsKeywords:
         
         def type_task():
             """实际的文本输入任务"""
-            window = self.library._get_current_window()
-            control = self.control_service.find_control(window, control_identifier, timeout)
-            self.control_service.type_into_control(control, text)
-            return f"Successfully typed into control {control_identifier}"
+            CoInitialize()
+            try:
+                window = self.library._get_current_window()
+                control = self.control_service.find_control(window, control_identifier, timeout)
+                self.control_service.type_into_control(control, text)
+                return f"Successfully typed into control {control_identifier}"
+            finally:
+                CoUninitialize()
         
         # 提交任务到线程池
         future = self.executor.submit(type_task)
-        # 返回future对象的标识，用于后续查询
-        return id(future)
+        # 将future对象存储到映射中，用于后续查询
+        task_id = id(future)
+        self.task_map[task_id] = future
+        return task_id
     
     @keyword("Async Find All Controls")
     def async_find_all_controls(self, control_identifier, timeout=None):
@@ -82,26 +91,32 @@ class AsyncControlOperationsKeywords:
         
         def find_all_task():
             """实际的查找所有控件任务"""
-            window = self.library._get_current_window()
-            # 这里假设robocorp-windows支持find_all方法，返回所有匹配的控件
-            # 如果不支持，我们可以模拟实现
-            controls = []
-            # 简单实现：多次尝试查找，直到超时
-            start_time = time.time()
-            while time.time() - start_time < timeout:
-                try:
-                    control = self.control_service.find_control(window, control_identifier, timeout=0.5)
-                    if control and control not in controls:
-                        controls.append(control)
-                    # 短暂等待，避免CPU占用过高
-                    time.sleep(0.1)
-                except ControlNotFoundError:
-                    pass
-            return controls
+            CoInitialize()
+            try:
+                window = self.library._get_current_window()
+                # 这里假设robocorp-windows支持find_all方法，返回所有匹配的控件
+                # 如果不支持，我们可以模拟实现
+                controls = []
+                # 简单实现：多次尝试查找，直到超时
+                start_time = time.time()
+                while time.time() - start_time < timeout:
+                    try:
+                        control = self.control_service.find_control(window, control_identifier, timeout=0.5)
+                        if control and control not in controls:
+                            controls.append(control)
+                        # 短暂等待，避免CPU占用过高
+                        time.sleep(0.1)
+                    except ControlNotFoundError:
+                        pass
+                return controls
+            finally:
+                CoUninitialize()
         
         # 提交任务到线程池
         future = self.executor.submit(find_all_task)
-        return id(future)
+        task_id = id(future)
+        self.task_map[task_id] = future
+        return task_id
     
     @keyword("Wait For Async Task")
     def wait_for_async_task(self, task_id, timeout=None):
@@ -122,23 +137,21 @@ class AsyncControlOperationsKeywords:
         timeout = timeout or self.library.timeout
         
         # 查找对应的future对象
-        future = None
-        for thread in self.executor._threads:
-            for obj in thread._tstate_lock._waiters:
-                if id(obj) == task_id:
-                    future = obj
-                    break
-            if future:
-                break
-        
-        if not future:
+        if task_id not in self.task_map:
             raise ValueError(f"Task with ID {task_id} not found")
+        
+        future = self.task_map[task_id]
         
         try:
             # 等待任务完成并返回结果
-            return future.result(timeout=timeout)
+            result = future.result(timeout=timeout)
+            # 从映射中移除已完成的任务
+            del self.task_map[task_id]
+            return result
         except Exception as e:
-            raise RuntimeError(f"Async task failed: {str(e)}")
+            # 从映射中移除失败的任务
+            del self.task_map[task_id]
+            raise AsyncOperationException(f"Async task failed: {str(e)}")
     
     @keyword("Async Click Control")
     def async_click_control(self, control_identifier, timeout=None):
@@ -159,14 +172,20 @@ class AsyncControlOperationsKeywords:
         
         def click_task():
             """实际的点击任务"""
-            window = self.library._get_current_window()
-            control = self.control_service.find_control(window, control_identifier, timeout)
-            self.control_service.click_control(control)
-            return f"Successfully clicked control {control_identifier}"
+            CoInitialize()
+            try:
+                window = self.library._get_current_window()
+                control = self.control_service.find_control(window, control_identifier, timeout)
+                self.control_service.click_control(control)
+                return f"Successfully clicked control {control_identifier}"
+            finally:
+                CoUninitialize()
         
         # 提交任务到线程池
         future = self.executor.submit(click_task)
-        return id(future)
+        task_id = id(future)
+        self.task_map[task_id] = future
+        return task_id
     
     @keyword("Shutdown Async Executor")
     def shutdown_async_executor(self, wait=True):
@@ -180,6 +199,8 @@ class AsyncControlOperationsKeywords:
         | Shutdown Async Executor | wait=False |
         """
         self.executor.shutdown(wait=wait)
+        # 清空任务映射
+        self.task_map.clear()
         # 重新创建一个新的执行器，以便后续使用
         self.executor = ThreadPoolExecutor(max_workers=5)
         return "Async executor shutdown completed"

@@ -303,3 +303,24 @@ class ControlOperationsKeywords:
             raise AssertionError(f"Checkbox should be unchecked but was checked: {control_identifier}")
         
         self.library._log(f"Checkbox is unchecked: {control_identifier}")
+    
+    @keyword("Validate Locator")
+    def validate_locator(self, locator):
+        """验证定位器格式是否有效
+        
+        Args:
+            locator: 要验证的定位器字符串
+            
+        Returns:
+            str: 验证结果消息
+            
+        Examples:
+        | Validate Locator | name=OKButton |
+        | Validate Locator | xpath://div[@id='container']/button |
+        | ${result} | Validate Locator | invalid_locator |
+        | Should Contain | ${result} | Valid strategies: |
+        """
+        from ..utils.locator_utils import locator_utils
+        is_valid, message = locator_utils.validate_locator(locator)
+        self.library._log(f"Locator validation: {message}")
+        return message

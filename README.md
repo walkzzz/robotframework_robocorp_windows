@@ -2,6 +2,17 @@
 
 一个基于robocorp-windows的Robot Framework库，提供Windows自动化功能，包括窗口管理、控件操作和键盘鼠标操作。
 
+## 兼容性
+
+### 支持版本
+- **Robot Framework**：6.0.0 - 7.x
+- **Python**：3.8, 3.9, 3.10, 3.11, 3.12
+- **Windows**：Windows 10, Windows 11
+
+### pywin32版本适配
+- Python 3.8：pywin32 >= 300, < 304
+- Python 3.9+：pywin32 >= 300
+
 ## 功能特性
 
 ### 核心功能

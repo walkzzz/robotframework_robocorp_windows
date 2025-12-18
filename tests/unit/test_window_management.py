@@ -172,14 +172,18 @@ class TestWindowManagementKeywords(unittest.TestCase):
         # Mock the current window
         mock_window = Mock()
         mock_window.name = "Test Window"
-        mock_window.close_window = Mock()
         self.mock_library.current_window = mock_window
+        
+        # Mock window_service methods
+        self.window_management.window_service.close_window = Mock()
+        self.window_management.window_service.get_window_title = Mock(return_value="Test Window")
+        self.mock_library._get_current_window = Mock(return_value=mock_window)
         
         # Call the method
         self.window_management.close_application()
         
         # Verify
-        mock_window.close_window.assert_called_once()
+        self.window_management.window_service.close_window.assert_called_once_with(mock_window)
         self.assertIsNone(self.mock_library.current_window)
         self.mock_library._log.assert_called()
     

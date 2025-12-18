@@ -7,6 +7,7 @@ This document provides detailed documentation for all keywords available in the 
 1. [Window Management Keywords](#window-management-keywords)
 2. [Control Operations Keywords](#control-operations-keywords)
 3. [Keyboard & Mouse Keywords](#keyboard--mouse-keywords)
+4. [Async Operations Keywords](#async-operations-keywords)
 
 ## 1. Window Management Keywords
 
@@ -510,4 +511,89 @@ Release Keys    CTRL    ALT
 Type Special Key    ENTER
 Type Special Key    TAB
 Type Special Key    ESC
+```
+
+## 4. Async Operations Keywords
+
+### Async Type Into Control
+
+**Asyncronously type text into a control.**
+
+**Arguments:**
+- `control_identifier`: Control identifier (name, id, class name, or other criteria)
+- `text`: Text to type into the control
+- `timeout`: Timeout for waiting until the control is available (default: library timeout)
+
+**Returns:**
+- `str`: Task ID that can be used to wait for the task to complete
+
+**Examples:**
+```robotframework
+${task_id}    Async Type Into Control    Edit    Hello, Robot Framework!
+${task_id}    Async Type Into Control    name=LargeTextArea    ${long_text}    timeout=10
+```
+
+### Async Find All Controls
+
+**Asyncronously find all matching controls in the current window.**
+
+**Arguments:**
+- `control_identifier`: Control identifier (name, id, class name, or other criteria)
+- `timeout`: Timeout for waiting until the control is available (default: library timeout)
+
+**Returns:**
+- `str`: Task ID that can be used to wait for the task to complete
+
+**Examples:**
+```robotframework
+${task_id}    Async Find All Controls    Edit
+${task_id}    Async Find All Controls    name=ListBoxItem    timeout=5
+```
+
+### Async Click Control
+
+**Asyncronously click on a control.**
+
+**Arguments:**
+- `control_identifier`: Control identifier (name, id, class name, or other criteria)
+- `timeout`: Timeout for waiting until the control is available (default: library timeout)
+
+**Returns:**
+- `str`: Task ID that can be used to wait for the task to complete
+
+**Examples:**
+```robotframework
+${task_id}    Async Click Control    OKButton
+${task_id}    Async Click Control    name=LongRunningButton    timeout=5
+```
+
+### Wait For Async Task
+
+**Wait for an async task to complete and return the result.**
+
+**Arguments:**
+- `task_id`: Task ID returned by an async keyword
+- `timeout`: Timeout for waiting until the task completes (default: library timeout)
+
+**Returns:**
+- `Any`: The result of the async task
+
+**Examples:**
+```robotframework
+${task_id}    Async Type Into Control    Edit    Hello, Robot Framework!
+${result}    Wait For Async Task    ${task_id}
+${result}    Wait For Async Task    ${task_id}    timeout=30
+```
+
+### Shutdown Async Executor
+
+**Shutdown the async executor.**
+
+**Arguments:**
+- `wait`: Whether to wait for all tasks to complete (default: True)
+
+**Examples:**
+```robotframework
+Shutdown Async Executor
+Shutdown Async Executor    wait=False
 ```

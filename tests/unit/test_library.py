@@ -140,16 +140,18 @@ class TestRobocorpWindowsLibrary(unittest.TestCase):
         mock_keyboard_mouse.assert_called_once()
     
     def test_get_application_without_app(self):
-        """Test that get_application raises RuntimeError when no app is connected"""
+        """Test that get_application raises ApplicationNotConnectedError when no app is connected"""
+        from robotframework_robocorp_windows.utils.exceptions import ApplicationNotConnectedError
         library = RobocorpWindows()
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(ApplicationNotConnectedError) as context:
             library._get_application()
         self.assertIn("No application connected", str(context.exception))
     
     def test_get_current_window_without_window(self):
-        """Test that get_current_window raises RuntimeError when no window is active"""
+        """Test that get_current_window raises NoActiveWindowError when no window is active"""
+        from robotframework_robocorp_windows.utils.exceptions import NoActiveWindowError
         library = RobocorpWindows()
-        with self.assertRaises(RuntimeError) as context:
+        with self.assertRaises(NoActiveWindowError) as context:
             library._get_current_window()
         self.assertIn("No active window", str(context.exception))
     

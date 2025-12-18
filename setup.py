@@ -6,18 +6,21 @@ setup(
     description='Robot Framework library for Windows automation using robocorp-windows',
     long_description=open('README.md', encoding='utf-8').read(),
     long_description_content_type='text/markdown',
-    author='Your Name',
-    author_email='your.email@example.com',
-    url='https://github.com/yourusername/robotframework-robocorp-windows',
+    author='Robocorp Windows Library Team',
+    author_email='contact@robocorpwindowslibrary.example.com',
+    url='https://github.com/walkzzz/robotframework-robocorp-windows',
     packages=find_packages(),
     include_package_data=True,
     install_requires=[
-        'robotframework>=4.0.0',
-        'robocorp-windows>=1.0.0'
+        'robotframework>=6.0.0,<8.0.0',
+        'robocorp-windows>=1.0.0,<2.0.0'
     ],
     extras_require={
         'pywin32-300': ['pywin32>=300,<304'],
-        'pywin32-300+': ['pywin32>=304']
+        'pywin32-300+': ['pywin32>=304'],
+        'py38': ['pywin32>=300,<304'],
+        'py39+': ['pywin32>=300'],
+        'yaml': ['pyyaml>=6.0']
     },
     classifiers=[
         'Programming Language :: Python :: 3',

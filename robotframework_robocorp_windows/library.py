@@ -4,6 +4,9 @@ from robot.utils import ConnectionCache, timestr_to_secs
 import logging
 import time
 
+# Import custom exceptions
+from .utils.exceptions import ApplicationNotConnectedError, NoActiveWindowError
+
 # Import keyword modules
 from .keywords.window_management import WindowManagementKeywords
 from .keywords.control_operations import ControlOperationsKeywords
@@ -27,20 +30,27 @@ class RobocorpWindows:
     | Close Application |
     """
     
-    def __init__(self, timeout=10, retry_interval=0.5):
+    def __init__(self, timeout=10, retry_interval=0.5, log_level='INFO'):
         """Initialize RobocorpWindows library with specified configuration.
         
         Args:
             timeout: Default timeout for waiting operations in seconds (default: 10)
             retry_interval: Interval between retries in seconds (default: 0.5)
+            log_level: Log level ('TRACE', 'DEBUG', 'INFO', 'WARN', 'ERROR') (default: INFO)
         """
         self.timeout = timestr_to_secs(timeout)
         self.retry_interval = timestr_to_secs(retry_interval)
         self.app = None
         self.current_window = None
         self.cache = ConnectionCache()
+        
+        # Initialize logger with specified log level
         self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(log_level.upper())
+        self.log_level = log_level.upper()
+        
         self.builtin = BuiltIn()
+        self.builtin.log(f"RobocorpWindows Library initialized with log level: {self.log_level}", level='DEBUG')
         
         # Initialize keyword modules
         self.window_management = WindowManagementKeywords(self)
@@ -411,10 +421,10 @@ class RobocorpWindows:
             Application: The current robocorp-windows Application instance
             
         Raises:
-            RuntimeError: If no application is connected or launched
+            ApplicationNotConnectedError: If no application is connected or launched
         """
         if not self.app:
-            raise RuntimeError("No application connected. Use 'Launch Application' or 'Connect To Application' first.")
+            raise ApplicationNotConnectedError("No application connected. Use 'Launch Application' or 'Connect To Application' first.")
         return self.app
         
     def _get_current_window(self):
@@ -424,10 +434,10 @@ class RobocorpWindows:
             Window: The current window instance
             
         Raises:
-            RuntimeError: If no window is active
+            NoActiveWindowError: If no window is active
         """
         if not self.current_window:
-            raise RuntimeError("No active window. Use 'Set Current Window' or 'Launch Application' first.")
+            raise NoActiveWindowError("No active window. Use 'Set Current Window' or 'Launch Application' first.")
         return self.current_window
         
     def _log(self, message, level='INFO'):
