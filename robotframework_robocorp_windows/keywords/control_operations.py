@@ -1,5 +1,10 @@
 from robot.api.deco import keyword
-from robocorp.windows import ElementNotFound
+from ..services.control_service import ControlService
+from ..utils.exceptions import (
+    WindowNotFoundError,
+    ControlNotFoundError,
+    ControlOperationException
+)
 
 class ControlOperationsKeywords:
     """Keywords for control operations."""
@@ -9,10 +14,39 @@ class ControlOperationsKeywords:
         self.library = library
         self.logger = library.logger
         self.builtin = library.builtin
+        self.control_service = ControlService()
+        self.control_service.set_logger(self.logger)
         
     @keyword("Find Control")
-    def find_control(self, control_identifier, timeout=None):
+    def find_control(self, control_identifier, timeout=None, use_cache=True):
         """Find a control in the current window.
+        
+        Args:
+            control_identifier: Control identifier (name, id, class name, or other criteria)
+            timeout: Timeout for waiting until the control is available (default: library timeout)
+            use_cache: Whether to use cache (default: True)
+            
+        Returns:
+            Control: The found control object
+            
+        Examples:
+        | ${control} | Find Control | Edit |
+        | ${control} | Find Control | name=OKButton | timeout=5 |
+        | ${control} | Find Control | name=RefreshButton | use_cache=False |
+        """
+        timeout = timeout or self.library.timeout
+        window = self.library._get_current_window()
+        
+        try:
+            control = self.control_service.find_control(window, control_identifier, timeout, use_cache)
+            self.library._log(f"Found control: {control_identifier}")
+            return control
+        except ControlNotFoundError as e:
+            raise AssertionError(str(e))
+    
+    @keyword("Find Control Without Cache")
+    def find_control_without_cache(self, control_identifier, timeout=None):
+        """Find a control in the current window without using cache.
         
         Args:
             control_identifier: Control identifier (name, id, class name, or other criteria)
@@ -22,25 +56,10 @@ class ControlOperationsKeywords:
             Control: The found control object
             
         Examples:
-        | ${control} | Find Control | Edit |
-        | ${control} | Find Control | name=OKButton | timeout=5 |
+        | ${control} | Find Control Without Cache | Edit |
+        | ${control} | Find Control Without Cache | name=OKButton | timeout=5 |
         """
-        timeout = timeout or self.library.timeout
-        window = self.library._get_current_window()
-        
-        def find_control_func():
-            try:
-                control = window.find(control_identifier)
-                return control
-            except Exception:
-                return None
-        
-        control = self.library._wait_until(find_control_func, timeout)
-        if not control:
-            raise ElementNotFound(f"Control not found: {control_identifier}")
-        
-        self.library._log(f"Found control: {control_identifier}")
-        return control
+        return self.find_control(control_identifier, timeout, use_cache=False)
     
     @keyword("Click Control")
     def click_control(self, control_identifier, timeout=None):
@@ -56,7 +75,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Clicking control: {control_identifier}")
-        control.click()
+        self.control_service.click_control(control)
     
     @keyword("Double Click Control")
     def double_click_control(self, control_identifier, timeout=None):
@@ -72,7 +91,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Double clicking control: {control_identifier}")
-        control.double_click()
+        self.control_service.double_click_control(control)
     
     @keyword("Right Click Control")
     def right_click_control(self, control_identifier, timeout=None):
@@ -88,7 +107,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Right clicking control: {control_identifier}")
-        control.right_click()
+        self.control_service.right_click_control(control)
     
     @keyword("Type Into Control")
     def type_into_control(self, control_identifier, text, timeout=None):
@@ -105,7 +124,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Typing into control: {control_identifier}, text: {text}")
-        control.type(text)
+        self.control_service.type_into_control(control, text)
     
     @keyword("Get Control Text")
     def get_control_text(self, control_identifier, timeout=None):
@@ -123,7 +142,7 @@ class ControlOperationsKeywords:
         | ${text} | Get Control Text | name=StatusLabel | timeout=5 |
         """
         control = self.find_control(control_identifier, timeout)
-        text = control.text
+        text = self.control_service.get_control_text(control)
         self.library._log(f"Got text from control {control_identifier}: {text}")
         return text
     
@@ -139,11 +158,11 @@ class ControlOperationsKeywords:
         | Control Should Exist | OKButton |
         | Control Should Exist | name=SubmitButton | timeout=5 |
         """
-        try:
-            self.find_control(control_identifier, timeout)
-            self.library._log(f"Control exists: {control_identifier}")
-        except ElementNotFound:
-            raise AssertionError(f"Control should exist but was not found: {control_identifier}")
+        timeout = timeout or self.library.timeout
+        window = self.library._get_current_window()
+        
+        self.control_service.control_should_exist(window, control_identifier, timeout)
+        self.library._log(f"Control exists: {control_identifier}")
     
     @keyword("Control Should Not Exist")
     def control_should_not_exist(self, control_identifier, timeout=None):
@@ -157,19 +176,10 @@ class ControlOperationsKeywords:
         | Control Should Not Exist | ErrorDialog |
         | Control Should Not Exist | name=LoadingSpinner | timeout=5 |
         """
-        window = self.library._get_current_window()
         timeout = timeout or self.library.timeout
+        window = self.library._get_current_window()
         
-        def control_not_exists():
-            try:
-                window.find(control_identifier)
-                return False
-            except Exception:
-                return True
-        
-        if not self.library._wait_until(control_not_exists, timeout):
-            raise AssertionError(f"Control should not exist but was found: {control_identifier}")
-        
+        self.control_service.control_should_not_exist(window, control_identifier, timeout)
         self.library._log(f"Control does not exist: {control_identifier}")
     
     @keyword("Set Control Value")
@@ -187,7 +197,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Setting control value: {control_identifier} = {value}")
-        control.set_value(value)
+        self.control_service.set_control_value(control, value)
     
     @keyword("Get Control Value")
     def get_control_value(self, control_identifier, timeout=None):
@@ -205,7 +215,7 @@ class ControlOperationsKeywords:
         | ${value} | Get Control Value | name=ComboBox | timeout=5 |
         """
         control = self.find_control(control_identifier, timeout)
-        value = control.get_value()
+        value = self.control_service.get_control_value(control)
         self.library._log(f"Got control value: {control_identifier} = {value}")
         return value
     
@@ -224,7 +234,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Selecting from combobox {control_identifier}: {item}")
-        control.select(item)
+        self.control_service.select_from_combobox(control, item)
     
     @keyword("Check Checkbox")
     def check_checkbox(self, control_identifier, timeout=None):
@@ -240,7 +250,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Checking checkbox: {control_identifier}")
-        control.check()
+        self.control_service.check_checkbox(control)
     
     @keyword("Uncheck Checkbox")
     def uncheck_checkbox(self, control_identifier, timeout=None):
@@ -256,7 +266,7 @@ class ControlOperationsKeywords:
         """
         control = self.find_control(control_identifier, timeout)
         self.library._log(f"Unchecking checkbox: {control_identifier}")
-        control.uncheck()
+        self.control_service.uncheck_checkbox(control)
     
     @keyword("Checkbox Should Be Checked")
     def checkbox_should_be_checked(self, control_identifier, timeout=None):
@@ -271,7 +281,7 @@ class ControlOperationsKeywords:
         | Checkbox Should Be Checked | name=EnableFeatureCheckbox | timeout=5 |
         """
         control = self.find_control(control_identifier, timeout)
-        if not control.is_checked():
+        if not self.control_service.is_checkbox_checked(control):
             raise AssertionError(f"Checkbox should be checked but was not: {control_identifier}")
         
         self.library._log(f"Checkbox is checked: {control_identifier}")
@@ -289,7 +299,7 @@ class ControlOperationsKeywords:
         | Checkbox Should Be Unchecked | name=EnableFeatureCheckbox | timeout=5 |
         """
         control = self.find_control(control_identifier, timeout)
-        if control.is_checked():
+        if self.control_service.is_checkbox_checked(control):
             raise AssertionError(f"Checkbox should be unchecked but was checked: {control_identifier}")
         
         self.library._log(f"Checkbox is unchecked: {control_identifier}")

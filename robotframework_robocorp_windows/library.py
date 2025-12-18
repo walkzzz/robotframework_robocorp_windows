@@ -8,6 +8,7 @@ import time
 from .keywords.window_management import WindowManagementKeywords
 from .keywords.control_operations import ControlOperationsKeywords
 from .keywords.keyboard_mouse import KeyboardMouseKeywords
+from .keywords.async_control_operations import AsyncControlOperationsKeywords
 
 @library(scope='GLOBAL', version='1.0.0')
 class RobocorpWindows:
@@ -45,6 +46,7 @@ class RobocorpWindows:
         self.window_management = WindowManagementKeywords(self)
         self.control_operations = ControlOperationsKeywords(self)
         self.keyboard_mouse = KeyboardMouseKeywords(self)
+        self.async_control_operations = AsyncControlOperationsKeywords(self)
     
     # 直接重新暴露关键字方法，确保Robot Framework能检测到它们
     

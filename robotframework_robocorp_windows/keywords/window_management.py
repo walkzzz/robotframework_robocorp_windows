@@ -1,7 +1,11 @@
 from robot.api.deco import keyword
-from robocorp.windows import desktop, find_window, find_windows, ElementNotFound, WindowElement
-import time
-import subprocess
+from ..services.window_service import WindowService
+from ..utils.exceptions import (
+    WindowNotFoundError,
+    ControlNotFoundError,
+    ApplicationLaunchError,
+    ApplicationConnectionError
+)
 
 class WindowManagementKeywords:
     """Keywords for window management operations."""
@@ -11,6 +15,8 @@ class WindowManagementKeywords:
         self.library = library
         self.logger = library.logger
         self.builtin = library.builtin
+        self.window_service = WindowService()
+        self.window_service.set_logger(self.logger)
         
     @keyword("Launch Application")
     def launch_application(self, app_path, timeout=None):
@@ -30,30 +36,18 @@ class WindowManagementKeywords:
         timeout = timeout or self.library.timeout
         self.library._log(f"Launching application: {app_path}")
         
-        # Start the application
-        subprocess.Popen(app_path)
-        time.sleep(1)  # Give some time for the application to start
+        # Use WindowService to launch application and find main window
+        executable_name, window = self.window_service.launch_application(app_path, timeout)
         
-        # Try to find the main window by executable name
-        executable_name = app_path.split('\\')[-1] if '\\' in app_path else app_path
-        
-        def find_main_window():
-            try:
-                windows = find_windows(f"executable:{executable_name}")
-                return windows[0] if windows else None
-            except Exception:
-                return None
-        
-        # Wait for window to appear
-        window = self.library._wait_until(find_main_window, timeout)
         if window:
             self.library.current_window = window
-            # In robocorp-windows 1.0.0, use name property to get window title
-            self.library._log(f"Found main window: {window.name}")
+            # Get window title using the service
+            window_title = self.window_service.get_window_title(window)
+            self.library._log(f"Found main window: {window_title}")
         else:
             self.library._log(f"Could not automatically find main window for {executable_name}", level="WARN")
         
-        # In this API, we don't have an Application object, so we'll just use a dummy identifier
+        # Register application in cache
         app_id = self.library.cache.register({"executable": executable_name, "window": window})
         return app_id
     
@@ -77,38 +71,21 @@ class WindowManagementKeywords:
         timeout = timeout or self.library.timeout
         self.library._log(f"Connecting to application with title='{title}', class_name='{class_name}', process='{process}'")
         
-        # Build locator string
-        locator_parts = []
-        if title:
-            locator_parts.append(f"name:{title}")
-        if class_name:
-            locator_parts.append(f"class:{class_name}")
-        if process:
-            locator_parts.append(f"pid:{process}")
-        
-        if not locator_parts:
-            raise ValueError("At least one of title, class_name, or process must be provided.")
-        
-        locator = " ".join(locator_parts)
-        
-        # Find the window
-        def find_window_func():
-            try:
-                return find_window(locator, raise_error=False)
-            except Exception:
-                return None
-        
-        window = self.library._wait_until(find_window_func, timeout)
-        if not window:
-            raise ElementNotFound(f"Window not found with locator: {locator}")
-        
-        self.library.current_window = window
-        # In robocorp-windows 1.0.0, use name property to get window title
-        self.library._log(f"Found main window: {window.name}")
-        
-        # In this API, we don't have an Application object, so we'll just use a dummy identifier
-        app_id = self.library.cache.register({"locator": locator, "window": window})
-        return app_id
+        try:
+            # Use WindowService to connect to application
+            locator, window = self.window_service.connect_to_application(title, class_name, process, timeout)
+            
+            self.library.current_window = window
+            # Get window title using the service
+            window_title = self.window_service.get_window_title(window)
+            self.library._log(f"Found main window: {window_title}")
+            
+            # Register application in cache
+            app_id = self.library.cache.register({"locator": locator, "window": window})
+            return app_id
+        except WindowNotFoundError as e:
+            # Re-raise with appropriate message
+            raise AssertionError(str(e))
     
     @keyword("Set Current Window")
     def set_current_window(self, title=None, class_name=None, timeout=None):
@@ -126,33 +103,17 @@ class WindowManagementKeywords:
         timeout = timeout or self.library.timeout
         self.library._log(f"Setting current window with title='{title}', class_name='{class_name}'")
         
-        # Build locator string
-        locator_parts = []
-        if title:
-            locator_parts.append(f"name:{title}")
-        if class_name:
-            locator_parts.append(f"class:{class_name}")
-        
-        if not locator_parts:
-            # If no locator provided, use the first top-level window
-            locator = "regex:.*"
-        else:
-            locator = " ".join(locator_parts)
-        
-        # Wait for window to be available
-        def find_window_func():
-            try:
-                return find_window(locator, raise_error=False)
-            except Exception:
-                return None
-        
-        window = self.library._wait_until(find_window_func, timeout)
-        if not window:
-            raise ElementNotFound(f"Window not found with title='{title}', class_name='{class_name}'")
-        
-        self.library.current_window = window
-        # In robocorp-windows 1.0.0, use name property to get window title
-        self.library._log(f"Set current window to: {window.name}")
+        try:
+            # Use WindowService to find and set current window
+            window = self.window_service.set_current_window(title, class_name, timeout)
+            
+            self.library.current_window = window
+            # Get window title using the service
+            window_title = self.window_service.get_window_title(window)
+            self.library._log(f"Set current window to: {window_title}")
+        except WindowNotFoundError as e:
+            # Re-raise with appropriate message
+            raise AssertionError(str(e))
     
     @keyword("Close Application")
     def close_application(self):
@@ -162,9 +123,10 @@ class WindowManagementKeywords:
         | Close Application |
         """
         if self.library.current_window:
-            # In robocorp-windows 1.0.0, use name property to get window title
-            self.library._log(f"Closing window: {self.library.current_window.name}")
-            self.library.current_window.close_window()
+            # Get window title using the service
+            window_title = self.window_service.get_window_title(self.library.current_window)
+            self.library._log(f"Closing window: {window_title}")
+            self.window_service.close_window(self.library.current_window)
             self.library.current_window = None
         
     @keyword("Minimize Window")
@@ -175,9 +137,10 @@ class WindowManagementKeywords:
         | Minimize Window |
         """
         window = self.library._get_current_window()
-        # In robocorp-windows 1.0.0, use name property to get window title
-        self.library._log(f"Minimizing window: {window.name}")
-        window.minimize_window()
+        # Get window title using the service
+        window_title = self.window_service.get_window_title(window)
+        self.library._log(f"Minimizing window: {window_title}")
+        self.window_service.minimize_window(window)
     
     @keyword("Maximize Window")
     def maximize_window(self):
@@ -187,9 +150,10 @@ class WindowManagementKeywords:
         | Maximize Window |
         """
         window = self.library._get_current_window()
-        # In robocorp-windows 1.0.0, use name property to get window title
-        self.library._log(f"Maximizing window: {window.name}")
-        window.maximize_window()
+        # Get window title using the service
+        window_title = self.window_service.get_window_title(window)
+        self.library._log(f"Maximizing window: {window_title}")
+        self.window_service.maximize_window(window)
     
     @keyword("Restore Window")
     def restore_window(self):
@@ -199,9 +163,10 @@ class WindowManagementKeywords:
         | Restore Window |
         """
         window = self.library._get_current_window()
-        # In robocorp-windows 1.0.0, use name property to get window title
-        self.library._log(f"Restoring window: {window.name}")
-        window.restore_window()
+        # Get window title using the service
+        window_title = self.window_service.get_window_title(window)
+        self.library._log(f"Restoring window: {window_title}")
+        self.window_service.restore_window(window)
     
     @keyword("Window Should Be Open")
     def window_should_be_open(self, title=None, class_name=None, timeout=None):
@@ -218,28 +183,8 @@ class WindowManagementKeywords:
         """
         timeout = timeout or self.library.timeout
         
-        def window_exists():
-            try:
-                # Build locator string
-                locator_parts = []
-                if title:
-                    locator_parts.append(f"name:{title}")
-                if class_name:
-                    locator_parts.append(f"class:{class_name}")
-                
-                if not locator_parts:
-                    # If no locator provided, check if current window exists
-                    return self.library.current_window is not None and self.library.current_window.exists()
-                
-                locator = " ".join(locator_parts)
-                window = find_window(locator, raise_error=False, timeout=0.5)
-                return window is not None
-            except Exception:
-                return False
-        
-        if not self.library._wait_until(window_exists, timeout):
-            raise AssertionError(f"Window not found with title='{title}', class_name='{class_name}'")
-        
+        # Use WindowService to check if window is open
+        self.window_service.window_should_be_open(title, class_name, timeout, self.library.current_window)
         self.library._log(f"Window is open: title='{title}', class_name='{class_name}'")
     
     @keyword("Window Should Be Closed")
@@ -257,28 +202,8 @@ class WindowManagementKeywords:
         """
         timeout = timeout or self.library.timeout
         
-        def window_not_exists():
-            try:
-                # Build locator string
-                locator_parts = []
-                if title:
-                    locator_parts.append(f"name:{title}")
-                if class_name:
-                    locator_parts.append(f"class:{class_name}")
-                
-                if not locator_parts:
-                    # If no locator provided, check if current window is closed
-                    return self.library.current_window is None or not self.library.current_window.exists()
-                
-                locator = " ".join(locator_parts)
-                window = find_window(locator, raise_error=False, timeout=0.5)
-                return window is None
-            except Exception:
-                return True
-        
-        if not self.library._wait_until(window_not_exists, timeout):
-            raise AssertionError(f"Window is still open: title='{title}', class_name='{class_name}'")
-        
+        # Use WindowService to check if window is closed
+        self.window_service.window_should_be_closed(title, class_name, timeout, self.library.current_window)
         self.library._log(f"Window is closed: title='{title}', class_name='{class_name}'")
     
     @keyword("Get Window Title")
@@ -293,7 +218,7 @@ class WindowManagementKeywords:
         | Should Contain | ${title} | Notepad |
         """
         window = self.library._get_current_window()
-        # In robocorp-windows 1.0.0, use name property to get window title
-        title = window.name
+        # Use WindowService to get window title
+        title = self.window_service.get_window_title(window)
         self.library._log(f"Current window title: {title}")
         return title
