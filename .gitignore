@@ -1,0 +1,36 @@
+# Python
+*.pyc
+__pycache__/
+venv/
+.env
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# Tests
+.pytest_cache/
+coverage_report/
+htmlcov/
+.coverage
+
+# Robot Framework
+log.html
+output.xml
+report.html
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.log

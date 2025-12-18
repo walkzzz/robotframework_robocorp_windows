@@ -1,0 +1,5 @@
+setuptools
+wheel
+robotframework>=4.0.0
+robocorp-windows==1.0.0
+pywin32<304
